@@ -1,0 +1,34 @@
+{
+    "$schema": "./config_schema.json",
+    "authProviders": {
+        "pam": {
+            "publicKeyLocation": "/etc/carta/carta_public.pem",
+            "privateKeyLocation": "/etc/carta/carta_private.pem",
+            "issuer": "carta.local",
+            "keyAlgorithm": "RS256",
+            "accessTokenAge": "15m",
+            "refreshTokenAge": "1w"
+        }
+    },
+    "database": {
+        "uri": "mongodb://localhost:27017",
+        "databaseName": "carta"
+    },
+    "serverPort": 3003,
+    "serverInterface": "0.0.0.0",
+    "processCommand": "/usr/bin/carta_backend",
+    "killCommand": "/usr/bin/kill_carta_backend",
+    "rootFolderTemplate": "/home/{username}/carta-controller-new/data",
+    "baseFolderTemplate": "/home/{username}/carta-controller-new/data",
+    "logFileTemplate": "/home/{username}/.carta/log/carta.log",
+    "additionalArgs": ["--no_frontend", "--no_database"],
+    "preserveEnv": true,
+    "dashboard": {
+        "bannerColor": "#d2dce5",
+        "backgroundColor": "#f6f8fa",
+        "bannerImage": "./public/images/carta_logo.svg",
+        "infoText": "Welcome to the CARTA server.",
+        "loginText": "<span>Please enter your login credentials:</span>",
+        "footerText": "<span>If you have any problems, comments or suggestions, please contact the system administrator.</span>"
+    }
+}

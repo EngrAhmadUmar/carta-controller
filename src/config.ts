@@ -8,7 +8,7 @@ import Ajv from "ajv";
 import addFormats from "ajv-formats";
 import {CartaCommandLineOptions, CartaRuntimeConfig, CartaServerConfig} from "./types";
 
-const defaultConfigPath = "/etc/carta/config.json";
+const defaultConfigPath = path.join(process.env.HOME || process.env.USERPROFILE || "", "carta-controller-new/config/config.json");
 const argv = yargs
     .parserConfiguration({
         'short-option-groups': false,

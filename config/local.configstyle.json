@@ -1,0 +1,34 @@
+{
+    "$schema": "./config_schema.json",
+    "authProviders": {
+        "pam": {
+            "publicKeyLocation": "./config/carta_public.pem",
+            "privateKeyLocation": "./config/carta_private.pem",
+            "issuer": "carta.local",
+            "keyAlgorithm": "RS256",
+            "accessTokenAge": "15m",
+            "refreshTokenAge": "1w"
+        }
+    },
+    "database": {
+        "uri": "mongodb://localhost:27017",
+        "databaseName": "carta"
+    },
+    "serverPort": 3003,
+    "serverInterface": "localhost",
+    "processCommand": "/home/mona/CARTA/carta-backend/build/carta_backend",
+    "killCommand": "/home/mona/carta-controller-new/scripts/carta_kill_script.sh",
+    "rootFolderTemplate": "/home/mona/carta-controller-new/data/{username}",
+    "baseFolderTemplate": "/home/mona/carta-controller-new/data/{username}",
+    "logFileTemplate": "/home/mona/carta-controller-new/logs/{username}_{pid}_{datetime}.log",
+    "additionalArgs": ["--no_frontend", "--no_database"],
+    "preserveEnv": true,
+    "dashboard": {
+        "bannerColor": "#d2dce5",
+        "backgroundColor": "#f6f8fa",
+        "bannerImage": "./public/images/carta_logo.svg",
+        "infoText": "Welcome to the CARTA server.",
+        "loginText": "<span>Please enter your login credentials:</span>",
+        "footerText": "<span>If you have any problems, comments or suggestions, please contact the system administrator.</span>"
+    }
+} 
