@@ -54,3 +54,6 @@ docs/_build
 !config/*.txt
 !config/*.schema.json
 !carta_backend
+
+# Ignore the backend binary for git history size
+carta_backend

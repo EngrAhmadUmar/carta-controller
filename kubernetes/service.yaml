@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: carta-controller
+  namespace: carta
+spec:
+  selector:
+    app: carta-controller
+  ports:
+  - name: http
+    port: 3003
+    targetPort: 3003
+  - name: backend
+    port: 3002
+    targetPort: 3002
+  type: NodePort 

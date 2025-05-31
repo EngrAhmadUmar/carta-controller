@@ -84,6 +84,28 @@ RUN cp /home/carta/carta-controller-new/config/docker.config.json /etc/carta/con
     chmod -R 755 /home/carta && \
     chmod -R 755 /home/carta/carta-controller-new/node_modules && \
     chown -R mona:mona /home/mona && \
+    chmod -R 755 /home/mona
+
+# Set up sample files directory
+RUN mkdir -p /home/carta/carta-controller-new/data && \
+    chown -R carta:carta /home/carta/carta-controller-new/data && \
+    chmod -R 755 /home/carta/carta-controller-new/data
+
+# Set up application
+WORKDIR /home/carta/carta-controller-new
+COPY . /home/carta/carta-controller-new/
+
+# Copy config and keys
+RUN cp /home/carta/carta-controller-new/config/docker.config.json /etc/carta/config.json && \
+    cp /home/carta/carta-controller-new/config/carta_public.pem /etc/carta/carta_public.pem && \
+    cp /home/carta/carta-controller-new/config/carta_private.pem /etc/carta/carta_private.pem && \
+    chmod 644 /etc/carta/config.json && \
+    chmod 644 /etc/carta/carta_public.pem && \
+    chmod 600 /etc/carta/carta_private.pem && \
+    chown -R carta:carta /home/carta && \
+    chmod -R 755 /home/carta && \
+    chmod -R 755 /home/carta/carta-controller-new/node_modules && \
+    chown -R mona:mona /home/mona && \
     chmod -R 755 /home/mona && \
     echo '#!/bin/bash\n\
 /home/carta/start_mongodb.sh &\n\

@@ -16,9 +16,6 @@ services:
       - type: volume
         source: carta-logs
         target: /home/carta/carta-controller-new/logs
-      - type: volume
-        source: carta-data
-        target: /home/carta/carta-controller-new/data
       - type: bind
         source: ./config/docker.config.json
         target: /home/carta/carta-controller-new/config/config.json
@@ -34,12 +31,19 @@ services:
         source: ./config/carta_private.pem
         target: /etc/carta/carta_private.pem
         read_only: true
+      - type: bind
+        source: ./data
+        target: /home/carta/carta-controller-new/data
+      - type: bind
+        source: /home/mona/Downloads/ICD-RxJS/ICD_test_stages/set_QA
+        target: /home/mona/carta-controller-new/data/ICD_test_stages/set_QA
     environment:
       - NODE_ENV=production
       - MONGODB_URI=mongodb://127.0.0.1:27017
       - MONGODB_DATABASE=carta
       - CARTA_SERVER_PORT=3003
       - CARTA_SERVER_INTERFACE=0.0.0.0
+      - CARTA_SAMPLE_FILES_PATH=/home/carta/carta-controller-new/data
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "/home/carta/carta-controller-new/healthcheck.sh"]
@@ -52,6 +56,4 @@ volumes:
   carta-mongodb-data:
     driver: local
   carta-logs:
-    driver: local
-  carta-data:
     driver: local 

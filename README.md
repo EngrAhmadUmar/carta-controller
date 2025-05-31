@@ -21,28 +21,28 @@ CARTA Controller is a secure, containerized web application for managing and mon
 ## Installation
 
 1. Clone the repository:
-```bash
+   ```bash
 git clone https://github.com/your-org/carta-controller.git
 cd carta-controller
 ```
 
 2. Build the Docker image:
-```bash
-docker build -t carta-controller .
-```
+   ```bash
+   docker build -t carta-controller .
+   ```
 
 3. Run the container:
-```bash
-docker run -d \
-  --name carta-controller \
+   ```bash
+   docker run -d \
+     --name carta-controller \
   -p 3000:3000 \
   -p 3002:3002 \
   -v /etc/pam.d:/etc/pam.d:ro \
   -v /etc/shadow:/etc/shadow:ro \
   -v /etc/passwd:/etc/passwd:ro \
   -v /etc/group:/etc/group:ro \
-  carta-controller
-```
+     carta-controller
+   ```
 
 ## Configuration
 
@@ -157,7 +157,7 @@ Logs are stored in the following locations:
 ### Building from Source
 
 1. Install dependencies:
-```bash
+   ```bash
 npm install
 ```
 
@@ -174,7 +174,7 @@ npm run dev
 ### Testing
 
 Run the test suite:
-```bash
+   ```bash
 npm test
 ```
 
@@ -211,7 +211,7 @@ For support, please:
 For local development, you'll need to set up the environment manually:
 
 1. Install system dependencies:
-```bash
+   ```bash
 sudo apt-get update
 sudo apt-get install -y \
     libpam0g-dev \
@@ -221,14 +221,14 @@ sudo apt-get install -y \
 ```
 
 2. Create required users and groups:
-```bash
+   ```bash
 sudo groupadd carta
 sudo useradd -m -g carta carta
 sudo usermod -aG shadow carta
 ```
 
 3. Set up directories and permissions:
-```bash
+   ```bash
 sudo mkdir -p /etc/carta
 sudo mkdir -p /home/carta/.carta/log
 sudo mkdir -p /home/carta/carta-controller-new/config
@@ -703,3 +703,43 @@ Additional security measures:
    - Vulnerability scanning
    - Access logging
    - Audit trails
+
+## Setup Instructions
+
+### Prerequisites
+- Docker
+- MicroK8s (for Kubernetes deployment)
+
+### Building the Docker Image
+1. Build the Docker image:
+   ```bash
+   docker build -t carta-controller .
+   ```
+2. Tag the image for MicroK8s:
+   ```bash
+   docker tag carta-controller localhost:32000/carta-controller:latest
+   ```
+3. Push the image to MicroK8s:
+   ```bash
+   docker push localhost:32000/carta-controller:latest
+   ```
+
+### Deploying on MicroK8s
+1. Apply the Kubernetes manifests:
+   ```bash
+   kubectl apply -f kubernetes/namespace.yaml
+   kubectl apply -f kubernetes/pvc.yaml
+   kubectl apply -f kubernetes/mongodb.yaml
+   kubectl apply -f kubernetes/deployment.yaml
+   kubectl apply -f kubernetes/service.yaml
+   ```
+2. Expose the carta-controller service:
+   - The service is configured as a NodePort. To access it from your local browser, run:
+     ```bash
+     kubectl get svc carta-controller -n carta
+     ```
+   - Use the URL: http://localhost:<NodePort> (e.g., http://localhost:31992)
+
+## Additional Information
+- The deployment uses PersistentVolumeClaims for MongoDB data, user data, and test files.
+- The service is exposed as a NodePort to allow local browser access.

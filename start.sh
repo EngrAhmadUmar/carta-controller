@@ -100,3 +100,22 @@ fi
 
 echo "Starting application..."
 cd /home/carta/carta-controller-new && npm start 
+
+# Start MongoDB
+/home/carta/start_mongodb.sh &
+sleep 5
+
+# Set up sample files directory
+SAMPLE_FILES_PATH=${CARTA_SAMPLE_FILES_PATH:-"/home/carta/carta-controller-new/data"}
+if [ ! -d "$SAMPLE_FILES_PATH" ]; then
+    echo "Creating sample files directory at $SAMPLE_FILES_PATH"
+    mkdir -p "$SAMPLE_FILES_PATH"
+fi
+
+# Ensure proper permissions
+chown -R carta:carta "$SAMPLE_FILES_PATH"
+chmod -R 755 "$SAMPLE_FILES_PATH"
+
+# Start CARTA Controller
+cd /home/carta/carta-controller-new
+npm start -- --config /etc/carta/config.json 

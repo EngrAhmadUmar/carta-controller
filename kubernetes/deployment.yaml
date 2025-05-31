@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: carta-controller
+  namespace: carta
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: carta-controller
+  template:
+    metadata:
+      labels:
+        app: carta-controller
+    spec:
+      initContainers:
+      - name: init-dirs
+        image: busybox
+        command: ['sh', '-c', 'mkdir -p /home/carta/.carta/log /home/mona/.carta/log /etc/carta && chmod -R 755 /home/carta /home/mona']
+        volumeMounts:
+        - name: carta-config
+          mountPath: /etc/carta
+      containers:
+      - name: carta-controller
+        image: localhost:32000/carta-controller:latest
+        ports:
+        - containerPort: 3003
+          name: http
+        - containerPort: 3002
+          name: backend
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        envFrom:
+        - configMapRef:
+            name: carta-config
+        volumeMounts:
+        - name: carta-config
+          mountPath: /etc/carta/config.json
+          subPath: config.json
+        - name: carta-ssl
+          mountPath: /etc/carta/carta_public.pem
+          subPath: carta_public.pem
+        - name: carta-ssl
+          mountPath: /etc/carta/carta_private.pem
+          subPath: carta_private.pem
+        - name: carta-logs
+          mountPath: /home/carta/.carta/log
+        - name: test-files
+          mountPath: /home/carta/carta-controller-new/data/ICD_test_stages/set_QA
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 3003
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 3003
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: carta-home
+        emptyDir: {}
+      - name: carta-config
+        configMap:
+          name: carta-config
+      - name: carta-ssl
+        secret:
+          secretName: carta-ssl
+      - name: carta-logs
+        persistentVolumeClaim:
+          claimName: carta-user-data
+      - name: test-files
+        persistentVolumeClaim:
+          claimName: carta-test-files 
