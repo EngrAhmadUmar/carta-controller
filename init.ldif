@@ -1,0 +1,35 @@
+dn: dc=nodomain
+objectClass: top
+objectClass: dcObject
+objectClass: organization
+o: CARTA
+dc: nodomain
+
+dn: cn=admin,dc=nodomain
+objectClass: simpleSecurityObject
+objectClass: organizationalRole
+cn: admin
+userPassword: {SSHA}admin123
+description: LDAP administrator
+
+dn: ou=users,dc=nodomain
+objectClass: organizationalUnit
+ou: users
+
+dn: ou=groups,dc=nodomain
+objectClass: organizationalUnit
+ou: groups
+
+dn: cn=carta-users,ou=groups,dc=nodomain
+objectClass: posixGroup
+objectClass: top
+cn: carta-users
+gidNumber: 1000
+description: CARTA Users Group
+
+dn: cn=carta-admins,ou=groups,dc=nodomain
+objectClass: posixGroup
+objectClass: top
+cn: carta-admins
+gidNumber: 1001
+description: CARTA Administrators Group 

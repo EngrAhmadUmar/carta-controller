@@ -1,13 +1,23 @@
 {
     "$schema": "./config_schema.json",
     "authProviders": {
-        "pam": {
+        "ldap": {
             "publicKeyLocation": "/home/mona/carta-controller-new/config/carta_public.pem",
             "privateKeyLocation": "/home/mona/carta-controller-new/config/carta_private.pem",
             "issuer": "carta.local",
             "keyAlgorithm": "RS256",
             "accessTokenAge": "15m",
-            "refreshTokenAge": "1w"
+            "refreshTokenAge": "1w",
+            "ldapOptions": {
+                "url": "ldap://localhost:389",
+                "searchBase": "ou=users,dc=nodomain",
+                "searchFilter": "uid={{username}}",
+                "starttls": false,
+                "reconnect": true,
+                "bindProperty": "dn",
+                "searchScope": "sub",
+                "strictDN": true
+            }
         }
     },
     "database": {

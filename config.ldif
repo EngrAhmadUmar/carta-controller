@@ -1,0 +1,7 @@
+dn: cn=config
+objectClass: olcGlobal
+cn: config
+olcPidFile: /var/run/slapd/slapd.pid
+olcArgsFile: /var/run/slapd/slapd.args
+olcLogLevel: none
+olcToolThreads: 1

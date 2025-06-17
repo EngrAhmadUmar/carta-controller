@@ -81,6 +81,11 @@ fi
 sudo chown -R carta:carta /home/carta
 sudo chmod 755 /home/carta
 
+# Sync LDAP users to local users
+echo "Syncing LDAP users to local users..."
+chmod +x /home/carta/carta-controller-new/sync_ldap_users.sh
+sudo /home/carta/carta-controller-new/sync_ldap_users.sh
+
 # Check if the config.json exists
 if [ ! -f "/home/carta/carta-controller-new/config/config.json" ]; then
     echo "ERROR: Configuration file /home/carta/carta-controller-new/config/config.json not found!"

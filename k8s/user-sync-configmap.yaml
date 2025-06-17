@@ -1,0 +1,79 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-sync-script
+  namespace: carta
+data:
+  sync_ldap_users.sh: |
+    #!/bin/bash
+
+    # Function to create local user if it doesn't exist
+    create_local_user() {
+        local username=$1
+        local uid=$2
+        
+        # Check if user exists
+        if ! id "$username" &>/dev/null; then
+            echo "Creating local user $username with UID $uid"
+            useradd -u "$uid" -s /bin/bash "$username"
+            # Create home directory
+            mkdir -p "/home/$username"
+            chown "$username:$username" "/home/$username"
+        else
+            echo "User $username already exists"
+        fi
+    }
+
+    # Wait for LDAP to be ready
+    echo "Waiting for LDAP to be ready..."
+    LDAP_HOST="openldap.carta.svc.cluster.local"
+    LDAP_PORT="389"
+    MAX_RETRIES=30
+    RETRY_INTERVAL=2
+
+    for i in $(seq 1 $MAX_RETRIES); do
+        echo "Attempt $i of $MAX_RETRIES to connect to LDAP..."
+        if ldapsearch -x -H "ldap://${LDAP_HOST}:${LDAP_PORT}" \
+            -b "dc=nodomain" \
+            -D "cn=admin,dc=nodomain" \
+            -w admin > /dev/null 2>&1; then
+            echo "LDAP is ready"
+            break
+        fi
+        
+        if [ $i -eq $MAX_RETRIES ]; then
+            echo "LDAP not ready after $MAX_RETRIES attempts"
+            exit 1
+        fi
+        
+        echo "LDAP not ready yet, waiting ${RETRY_INTERVAL}s..."
+        sleep $RETRY_INTERVAL
+    done
+
+    # Get all users from LDAP
+    echo "Querying LDAP for users..."
+    ldapsearch -x -H "ldap://${LDAP_HOST}:${LDAP_PORT}" \
+        -D "cn=admin,dc=nodomain" \
+        -w admin \
+        -b "ou=users,dc=nodomain" \
+        "objectClass=inetOrgPerson" | while read -r line; do
+        if [[ $line =~ ^uid: ]]; then
+            username=$(echo "$line" | cut -d' ' -f2)
+            echo "Found user: $username"
+            # Get UID from LDAP
+            uid=$(ldapsearch -x -H "ldap://${LDAP_HOST}:${LDAP_PORT}" \
+                -D "cn=admin,dc=nodomain" \
+                -w admin \
+                -b "ou=users,dc=nodomain" \
+                "uid=$username" uidNumber | grep "uidNumber:" | cut -d' ' -f2)
+            
+            if [ -n "$uid" ]; then
+                echo "Creating local user $username with UID $uid"
+                create_local_user "$username" "$uid"
+            else
+                echo "Warning: Could not find UID for user $username"
+            fi
+        fi
+    done
+
+    echo "User synchronization complete" 

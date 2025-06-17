@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: carta-controller
+  namespace: carta
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"  # Set to true for HTTPS
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+spec:
+  tls:
+    - hosts:
+      - carta.local
+      secretName: carta-tls-secret
+  rules:
+  - host: carta.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: carta-controller
+            port:
+              number: 3003 

@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: user-sync-job
+  namespace: carta
+spec:
+  schedule: "*/5 * * * *"  # Run every 5 minutes
+  concurrencyPolicy: Forbid  # Don't run if previous job is still running
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: sync-users
+            image: osixia/openldap:1.5.0
+            command: ['/bin/bash', '/scripts/sync_ldap_users.sh']
+            securityContext:
+              privileged: true  # Required for useradd
+            env:
+            - name: LDAP_HOST
+              value: "openldap.carta.svc.cluster.local"
+            - name: LDAP_PORT
+              value: "389"
+            volumeMounts:
+            - name: user-sync-script
+              mountPath: /scripts
+          volumes:
+          - name: user-sync-script
+            configMap:
+              name: user-sync-script
+              defaultMode: 0755
+          restartPolicy: OnFailure 

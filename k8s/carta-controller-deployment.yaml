@@ -1,0 +1,372 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: carta-config
+  namespace: carta
+data:
+  NODE_ENV: "production"
+  MONGODB_URI: "mongodb://mongodb.carta.svc.cluster.local:27017"
+  MONGODB_DATABASE: "carta"
+  CARTA_SERVER_PORT: "3003"
+  CARTA_SERVER_INTERFACE: "0.0.0.0"
+  CARTA_SAMPLE_FILES_PATH: "/home/carta/carta-controller-new/data"
+  config.json: |
+    {
+      "$schema": "./config_schema.json",
+      "authProviders": {
+        "ldap": {
+          "publicKeyLocation": "/etc/carta/carta_public.pem",
+          "privateKeyLocation": "/etc/carta/carta_private.pem",
+          "issuer": "carta.local",
+          "keyAlgorithm": "RS256",
+          "accessTokenAge": "15m",
+          "refreshTokenAge": "1w",
+          "ldapOptions": {
+            "url": "ldap://openldap.carta.svc.cluster.local:389",
+            "searchBase": "ou=users,dc=nodomain",
+            "searchFilter": "uid={{username}}",
+            "starttls": false,
+            "reconnect": true,
+            "bindProperty": "dn",
+            "searchScope": "sub",
+            "strictDN": true
+          }
+        }
+      },
+      "database": {
+        "uri": "mongodb://mongodb.carta.svc.cluster.local:27017",
+        "databaseName": "carta"
+      },
+      "serverPort": 3003,
+      "serverInterface": "0.0.0.0",
+      "processCommand": "/usr/bin/carta_backend",
+      "killCommand": "/usr/bin/kill_carta_backend",
+      "rootFolderTemplate": "/home/carta/carta-controller-new/data",
+      "baseFolderTemplate": "/home/carta/carta-controller-new/data",
+      "logFileTemplate": "/home/carta/.carta/log/carta.log",
+      "additionalArgs": ["--no_frontend", "--no_database"],
+      "preserveEnv": true,
+      "dashboard": {
+        "bannerColor": "#d2dce5",
+        "backgroundColor": "#f6f8fa",
+        "bannerImage": "./public/images/carta_logo.svg",
+        "infoText": "Welcome to the CARTA server.",
+        "loginText": "<span>Please enter your login credentials:</span>",
+        "footerText": "<span>If you have any problems, comments or suggestions, please contact the system administrator.</span>"
+      }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ldap-scripts
+  namespace: carta
+data:
+  add_ldap_user.sh: |
+    #!/bin/bash
+
+    # Create base LDIF file
+    cat > base.ldif << EOF
+    dn: dc=nodomain
+    objectClass: dcObject
+    objectClass: organization
+    dc: nodomain
+    o: CARTA
+    EOF
+
+    # Add base DN
+    ldapadd -x -D "cn=admin,dc=nodomain" -w admin -f base.ldif
+
+    # Create organizational units
+    cat > ou.ldif << EOF
+    dn: ou=users,dc=nodomain
+    objectClass: organizationalUnit
+    ou: users
+
+    dn: ou=groups,dc=nodomain
+    objectClass: organizationalUnit
+    ou: groups
+    EOF
+
+    # Add OUs
+    ldapadd -x -D "cn=admin,dc=nodomain" -w admin -f ou.ldif
+
+    # Create groups
+    cat > groups.ldif << EOF
+    dn: cn=carta-users,ou=groups,dc=nodomain
+    objectClass: posixGroup
+    objectClass: top
+    cn: carta-users
+    gidNumber: 1000
+    description: CARTA Users Group
+
+    dn: cn=carta-admins,ou=groups,dc=nodomain
+    objectClass: posixGroup
+    objectClass: top
+    cn: carta-admins
+    gidNumber: 1001
+    description: CARTA Administrators Group
+    EOF
+
+    # Add groups
+    ldapadd -x -D "cn=admin,dc=nodomain" -w admin -f groups.ldif
+
+    # Create users with proper group memberships
+    for i in {1..250}; do
+      # Generate hashed password
+      HASHED_PASS=$(slappasswd -s "testpass" -h "{SSHA}")
+      
+      cat > user.ldif << EOF
+    dn: uid=testuser$i,ou=users,dc=nodomain
+    objectClass: inetOrgPerson
+    objectClass: posixAccount
+    objectClass: shadowAccount
+    objectClass: top
+    uid: testuser$i
+    sn: Test$i
+    givenName: User$i
+    cn: Test User$i
+    displayName: Test User$i
+    uidNumber: $((1000 + i))
+    gidNumber: 1000
+    userPassword: $HASHED_PASS
+    loginShell: /bin/bash
+    homeDirectory: /home/testuser$i
+    memberOf: cn=carta-users,ou=groups,dc=nodomain
+    EOF
+
+      # Add the user to LDAP
+      ldapadd -x -D "cn=admin,dc=nodomain" -w admin -f user.ldif
+      rm user.ldif
+      mkdir -p /home/testuser$i/.carta/log
+    done
+
+    # Add admin user
+    HASHED_ADMIN_PASS=$(slappasswd -s "admin" -h "{SSHA}")
+    
+    cat > admin.ldif << EOF
+    dn: uid=admin,ou=users,dc=nodomain
+    objectClass: inetOrgPerson
+    objectClass: posixAccount
+    objectClass: shadowAccount
+    objectClass: top
+    uid: admin
+    sn: Admin
+    givenName: System
+    cn: System Admin
+    displayName: System Administrator
+    uidNumber: 2000
+    gidNumber: 1001
+    userPassword: $HASHED_ADMIN_PASS
+    loginShell: /bin/bash
+    homeDirectory: /home/admin
+    memberOf: cn=carta-admins,ou=groups,dc=nodomain
+    EOF
+
+    # Add admin user
+    ldapadd -x -D "cn=admin,dc=nodomain" -w admin -f admin.ldif
+
+    # Clean up
+    rm base.ldif ou.ldif groups.ldif admin.ldif
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: carta-controller
+  namespace: carta
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: carta-controller
+  template:
+    metadata:
+      labels:
+        app: carta-controller
+        component: ldap
+    spec:
+      initContainers:
+      - name: init-dirs
+        image: busybox
+        command: ['sh', '-c', 'mkdir -p /home/carta/carta-controller-new/data /home/carta/.carta/log && chmod -R 755 /home/carta']
+        volumeMounts:
+        - name: carta-data
+          mountPath: /home/carta/carta-controller-new/data
+        - name: carta-logs
+          mountPath: /home/carta/.carta/log
+      containers:
+      - name: openldap
+        image: osixia/openldap:1.5.0
+        ports:
+        - containerPort: 389
+          name: ldap
+        - containerPort: 636
+          name: ldaps
+        env:
+        - name: LDAP_ORGANISATION
+          value: "CARTA"
+        - name: LDAP_DOMAIN
+          value: "nodomain"
+        - name: LDAP_ADMIN_PASSWORD
+          value: "admin"
+        - name: LDAP_BASE_DN
+          value: "dc=nodomain"
+        - name: LDAP_READONLY_USER
+          value: "true"
+        - name: LDAP_RFC2307BIS_SCHEMA
+          value: "true"
+        - name: LDAP_NIS_SCHEMA
+          value: "true"
+        - name: LDAP_LOG_LEVEL
+          value: "256"
+        volumeMounts:
+        - name: ldap-data
+          mountPath: /var/lib/ldap
+        - name: ldap-config
+          mountPath: /etc/ldap/slapd.d
+        - name: ldap-scripts
+          mountPath: /scripts
+        readinessProbe:
+          exec:
+            command:
+            - ldapsearch
+            - -x
+            - -H
+            - ldap://localhost:389
+            - -b
+            - dc=nodomain
+            - -D
+            - cn=admin,dc=nodomain
+            - -w
+            - admin
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+      - name: carta-controller
+        image: localhost:32000/carta-controller:1.0.0
+        ports:
+        - containerPort: 3003
+          name: http
+        - containerPort: 3002
+          name: backend
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1"
+        envFrom:
+        - configMapRef:
+            name: carta-config
+        volumeMounts:
+        - name: carta-data
+          mountPath: /home/carta/carta-controller-new/data
+        - name: carta-logs
+          mountPath: /home/carta/.carta/log
+        - name: carta-config
+          mountPath: /etc/carta
+        - name: carta-public-key
+          mountPath: /etc/carta/carta_public.pem
+          subPath: carta_public.pem
+          readOnly: true
+        - name: carta-private-key
+          mountPath: /etc/carta/carta_private.pem
+          subPath: carta_private.pem
+          readOnly: true
+        livenessProbe:
+          httpGet:
+            path: /dashboard
+            port: http
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /dashboard
+            port: http
+          initialDelaySeconds: 60
+          periodSeconds: 10
+      volumes:
+      - name: carta-data
+        persistentVolumeClaim:
+          claimName: carta-data-pvc
+      - name: carta-logs
+        persistentVolumeClaim:
+          claimName: carta-logs-pvc
+      - name: carta-config
+        configMap:
+          name: carta-config
+          defaultMode: 0755
+      - name: carta-public-key
+        configMap:
+          name: carta-public-key
+          defaultMode: 0444
+      - name: carta-private-key
+        secret:
+          secretName: carta-private-key
+          defaultMode: 0400
+      - name: ldap-data
+        persistentVolumeClaim:
+          claimName: ldap-data-pvc
+      - name: ldap-config
+        persistentVolumeClaim:
+          claimName: ldap-config-pvc
+      - name: ldap-scripts
+        configMap:
+          name: ldap-scripts
+          defaultMode: 0755
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: carta-controller
+  namespace: carta
+spec:
+  type: NodePort
+  ports:
+    - name: http
+      port: 3003
+      targetPort: 3003
+      nodePort: 30004
+    - name: ldap
+      port: 389
+      targetPort: 389
+    - name: backend
+      port: 3002
+      targetPort: 3002
+  selector:
+    app: carta-controller
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ldap-init-job
+  namespace: carta
+spec:
+  template:
+    spec:
+      containers:
+      - name: ldap-init
+        image: osixia/openldap:1.5.0
+        command: ["sh", "-c", "until ldapsearch -x -H ldap://openldap.carta.svc.cluster.local:389 -b dc=nodomain -D cn=admin,dc=nodomain -w admin; do sleep 2; done; /scripts/add_ldap_user.sh"]
+        volumeMounts:
+        - name: ldap-data
+          mountPath: /var/lib/ldap
+        - name: ldap-config
+          mountPath: /etc/ldap/slapd.d
+        - name: ldap-scripts
+          mountPath: /scripts
+      volumes:
+      - name: ldap-data
+        persistentVolumeClaim:
+          claimName: ldap-data-pvc
+      - name: ldap-config
+        persistentVolumeClaim:
+          claimName: ldap-config-pvc
+      - name: ldap-scripts
+        configMap:
+          name: ldap-scripts
+          defaultMode: 0755
+      restartPolicy: OnFailure 
