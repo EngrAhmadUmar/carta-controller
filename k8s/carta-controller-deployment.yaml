@@ -22,14 +22,11 @@ data:
           "accessTokenAge": "15m",
           "refreshTokenAge": "1w",
           "ldapOptions": {
-            "url": "ldap://openldap.carta.svc.cluster.local:389",
-            "searchBase": "ou=users,dc=nodomain",
+            "url": "ldap://localhost:389",
+            "searchBase": "dc=nodomain",
             "searchFilter": "uid={{username}}",
-            "starttls": false,
-            "reconnect": true,
-            "bindProperty": "dn",
-            "searchScope": "sub",
-            "strictDN": true
+            "bindDN": "cn=admin,dc=nodomain",
+            "bindCredentials": "admin"
           }
         }
       },
@@ -39,6 +36,7 @@ data:
       },
       "serverPort": 3003,
       "serverInterface": "0.0.0.0",
+      "httpOnly": true,
       "processCommand": "/usr/bin/carta_backend",
       "killCommand": "/usr/bin/kill_carta_backend",
       "rootFolderTemplate": "/home/carta/carta-controller-new/data",
@@ -267,7 +265,8 @@ spec:
         - name: carta-logs
           mountPath: /home/carta/.carta/log
         - name: carta-config
-          mountPath: /etc/carta
+          mountPath: /etc/carta/config.json
+          subPath: config.json
         - name: carta-public-key
           mountPath: /etc/carta/carta_public.pem
           subPath: carta_public.pem
@@ -286,8 +285,10 @@ spec:
           httpGet:
             path: /dashboard
             port: http
-          initialDelaySeconds: 60
+          initialDelaySeconds: 120
           periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
       volumes:
       - name: carta-data
         persistentVolumeClaim:
