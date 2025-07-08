@@ -26,6 +26,7 @@
     },
     "serverPort": 3003,
     "serverInterface": "localhost",
+    "backendMode": "process",
     "processCommand": "/home/mona/CARTA/carta-backend/build/carta_backend",
     "killCommand": "/home/mona/carta-controller-new/scripts/carta_kill_script.sh",
     "rootFolderTemplate": "/home/mona/carta-controller-new/data/{username}",

@@ -1,0 +1,116 @@
+# Real CARTA Backend Image for Multi-User Kubernetes Deployment
+# This image contains the actual CARTA backend binary for concurrent user sessions
+#
+# Before building, ensure you have all required libraries in a local 'libs/' directory:
+#   - Place all CASA .so files (e.g., libcasa_*.so*) in libs/casacore/
+#   - Place libzfp.so.1 in libs/
+#
+# Example structure:
+#   libs/
+#     libzfp.so.1
+#     casacore/
+#       libcasa_casa.so.7
+#       libcasa_coordinates.so.7
+#       ...
+
+FROM ubuntu:22.04
+
+# Install basic dependencies and all required libraries
+RUN apt-get update && apt-get install -y \
+    python3 \
+    curl \
+    netcat-openbsd \
+    libprotobuf23 \
+    libuuid1 \
+    zlib1g \
+    libzstd1 \
+    libcfitsio9 \
+    libwcs7 \
+    libgsl27 \
+    libgomp1 \
+    libhdf5-103 \
+    libstdc++6 \
+    libgcc-s1 \
+    libcurl4 \
+    libbz2-1.0 \
+    libgslcblas0 \
+    libopenblas0 \
+    libfftw3-3 \
+    libfftw3-single3 \
+    libssl3 \
+    libnghttp2-14 \
+    libidn2-0 \
+    librtmp1 \
+    libssh-4 \
+    libpsl5 \
+    libnettle8 \
+    libgnutls30 \
+    libgssapi-krb5-2 \
+    libldap-2.5-0 \
+    libbrotli1 \
+    libgfortran5 \
+    libaec0 \
+    libunistring2 \
+    libhogweed6 \
+    libgmp10 \
+    libp11-kit0 \
+    libtasn1-6 \
+    libkrb5-3 \
+    libk5crypto3 \
+    libcom-err2 \
+    libkrb5support0 \
+    libsasl2-2 \
+    libquadmath0 \
+    libffi8 \
+    libkeyutils1 \
+    libsz2 \
+    # Install CASA data packages
+    casacore-data \
+    casacore-data-igrf \
+    casacore-data-jpl-de200 \
+    casacore-data-jpl-de405 \
+    casacore-data-lines \
+    casacore-data-observatories \
+    casacore-data-sources \
+    casacore-data-tai-utc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create carta group and user (will be overridden by pod security context)
+RUN groupadd -g 1000 carta && useradd -m -u 1000 -g 1000 carta
+
+# Create necessary directories
+RUN mkdir -p /data /home/carta/.carta/log /etc/carta /opt/carta-casacore/lib /usr/local/lib && \
+    chown -R carta:carta /data /home/carta/.carta
+
+# Copy the real CARTA backend binary
+COPY carta_backend /usr/local/bin/carta_backend
+RUN chmod +x /usr/local/bin/carta_backend
+
+# Copy CASA libraries (from local build context)
+COPY libs/casacore/* /opt/carta-casacore/lib/
+
+# Copy custom libraries (from local build context)
+COPY libs/libzfp.so.1 /usr/local/lib/
+
+# Ensure CASA data directories exist and have correct permissions
+RUN mkdir -p /usr/share/casacore/data/ephemerides /usr/share/casacore/data/geodetic && \
+    chown -R root:root /usr/share/casacore && \
+    chmod -R 755 /usr/share/casacore
+
+# Set environment variables
+ENV PORT=3002
+ENV DATA_DIR=/data
+ENV LD_LIBRARY_PATH=/opt/carta-casacore/lib:/usr/local/lib:$LD_LIBRARY_PATH
+
+# Switch to carta user (will be overridden by pod security context)
+USER carta
+
+# Expose the port
+EXPOSE 3002
+
+# Health check - CARTA backend provides its own health endpoint
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3002/api/health || exit 1
+
+# Default command - will be overridden by pod args
+CMD ["/usr/local/bin/carta_backend"] 

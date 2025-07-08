@@ -1,0 +1,56 @@
+{
+  "$schema": "./config_schema.json",
+  "authProviders": {
+    "ldap": {
+      "publicKeyLocation": "/etc/carta/carta_public.pem",
+      "privateKeyLocation": "/etc/carta/carta_private.pem",
+      "issuer": "carta.local",
+      "keyAlgorithm": "RS256",
+      "accessTokenAge": "15m",
+      "refreshTokenAge": "1w",
+      "ldapOptions": {
+        "url": "ldap://localhost:389",
+        "searchBase": "dc=nodomain",
+        "searchFilter": "uid={{username}}",
+        "bindDN": "cn=admin,dc=nodomain",
+        "bindCredentials": "admin"
+      }
+    }
+  },
+  "database": {
+    "uri": "mongodb://localhost:27017",
+    "databaseName": "carta"
+  },
+  "serverPort": 3003,
+  "serverInterface": "0.0.0.0",
+  "httpOnly": true,
+  "backendMode": "pod",
+  "kubernetes": {
+    "namespace": "carta",
+    "backendImage": "localhost:32000/carta-backend:latest",
+    "dataPvc": "carta-data-pvc",
+    "resources": {
+      "requests": {
+        "memory": "256Mi",
+        "cpu": "250m"
+      },
+      "limits": {
+        "memory": "1Gi",
+        "cpu": "1000m"
+      }
+    }
+  },
+  "rootFolderTemplate": "/home/carta/carta-controller-new/data",
+  "baseFolderTemplate": "/home/carta/carta-controller-new/data",
+  "logFileTemplate": "/home/carta/.carta/log/carta.log",
+  "additionalArgs": ["--no_frontend", "--no_database"],
+  "preserveEnv": true,
+  "dashboard": {
+    "bannerColor": "#d2dce5",
+    "backgroundColor": "#f6f8fa",
+    "bannerImage": "./public/images/carta_logo.svg",
+    "infoText": "Welcome to the CARTA server.",
+    "loginText": "<span>Please enter your login credentials:</span>",
+    "footerText": "<span>If you have any problems, comments or suggestions, please contact the system administrator.</span>"
+  }
+} 

@@ -109,6 +109,39 @@ export interface CartaServerConfig {
     dashboardAddress: string;
     apiAddress?: string;
     frontendPath: string;
+    // Backend deployment mode: 'process' for local processes, 'pod' for Kubernetes pods
+    backendMode?: 'process' | 'pod';
+    // Kubernetes-specific configuration (only used when backendMode is 'pod')
+    kubernetes?: {
+        // Namespace for user pods
+        namespace?: string;
+        // Backend container image
+        backendImage?: string;
+        // Persistent volume claim for user data
+        dataPvc?: string;
+        // Resource limits for user pods
+        resources?: {
+            requests?: {
+                memory?: string;
+                cpu?: string;
+            };
+            limits?: {
+                memory?: string;
+                cpu?: string;
+            };
+        };
+        // Service account for user pods
+        serviceAccount?: string;
+        // Node selector for user pods
+        nodeSelector?: Record<string, string>;
+        // Tolerations for user pods
+        tolerations?: Array<{
+            key: string;
+            operator: string;
+            value?: string;
+            effect?: string;
+        }>;
+    };
     // Range of ports to user for backend processes. Effectively limits the number of simultaneous users
     backendPorts: {
         min: number;

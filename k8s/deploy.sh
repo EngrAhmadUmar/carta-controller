@@ -1,29 +1,65 @@
 #!/bin/bash
 
-# Create namespace if it doesn't exist
-microk8s kubectl create namespace carta --dry-run=client -o yaml | microk8s kubectl apply -f -
+# CARTA Controller Deployment Script
+# This script deploys the CARTA controller with pod-based backend spawning
 
-# Create ConfigMap from docker config
-microk8s kubectl create configmap carta-config --from-file=config/docker.config.json -n carta --dry-run=client -o yaml | microk8s kubectl apply -f -
+set -e
 
-# Create Secret for SSL keys
-microk8s kubectl create secret generic carta-ssl --from-file=carta_public.pem=config/carta_public.pem --from-file=carta_private.pem=config/carta_private.pem -n carta --dry-run=client -o yaml | microk8s kubectl apply -f -
+NAMESPACE="carta"
+CONTROLLER_IMAGE="localhost:32000/carta-controller:1.0.0"
+BACKEND_IMAGE="localhost:32000/carta-backend:latest"
 
-# Apply PVCs
-microk8s kubectl apply -f k8s/carta-pvc.yaml
+echo "🚀 Deploying CARTA Controller with Pod-based Backend Spawning..."
 
-# Tag and push the image to local registry
-docker tag carta-controller:1.0.0 localhost:32000/carta-controller:1.0.0
-docker push localhost:32000/carta-controller:1.0.0
+# Check if namespace exists, create if not
+if ! kubectl get namespace $NAMESPACE >/dev/null 2>&1; then
+    echo "📦 Creating namespace: $NAMESPACE"
+    kubectl create namespace $NAMESPACE
+else
+    echo "✅ Namespace $NAMESPACE already exists"
+fi
 
-# Deploy the application
-microk8s kubectl apply -f k8s/carta-controller-deployment.yaml
-microk8s kubectl apply -f k8s/carta-controller-service.yaml
+# Apply RBAC resources first
+echo "🔐 Applying RBAC resources..."
+kubectl apply -f k8s/carta-controller-deployment.yaml --namespace=$NAMESPACE
+
+# Wait a moment for RBAC to propagate
+echo "⏳ Waiting for RBAC resources to propagate..."
+sleep 5
+
+# Apply the main deployment
+echo "📋 Applying main deployment..."
+kubectl apply -f k8s/carta-controller-deployment.yaml --namespace=$NAMESPACE
+
+# Apply backend configuration
+echo "⚙️  Applying backend configuration..."
+kubectl apply -f k8s/carta-backend-deployment.yaml --namespace=$NAMESPACE
 
 # Wait for deployment to be ready
-echo "Waiting for deployment to be ready..."
-microk8s kubectl rollout status deployment/carta-controller -n carta
+echo "⏳ Waiting for deployment to be ready..."
+kubectl wait --for=condition=available --timeout=300s deployment/carta-controller -n $NAMESPACE
 
-# Get service access information
-echo "Service access information:"
-microk8s kubectl get svc carta-controller -n carta 
+# Check pod status
+echo "🔍 Checking pod status..."
+kubectl get pods -n $NAMESPACE -l app=carta-controller
+
+# Get service information
+echo "🌐 Service information:"
+kubectl get svc -n $NAMESPACE
+
+echo ""
+echo "✅ Deployment completed successfully!"
+echo ""
+echo "📊 To monitor the deployment:"
+echo "   kubectl logs -f deployment/carta-controller -n $NAMESPACE -c carta-controller"
+echo ""
+echo "🌐 Access the application:"
+echo "   http://localhost:30004/dashboard"
+echo ""
+echo "🔧 To test user pod creation:"
+echo "   1. Access the dashboard and login with a test user"
+echo "   2. Check if user pods are created:"
+echo "      kubectl get pods -n $NAMESPACE -l app=carta-backend"
+echo ""
+echo "🧹 To clean up:"
+echo "   kubectl delete namespace $NAMESPACE" 

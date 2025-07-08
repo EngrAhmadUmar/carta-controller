@@ -47,10 +47,22 @@ dist/**/*.js.map
 carta-controller-*.tgz
 docs/_build
 
+# Large binary files and libraries
+carta_backend
+libs/
+carta_backend_test.py
+
+# Kube-OVN networking files (cluster-specific)
+kube-ovn*.yaml
+ovn*.yaml
+ovs-ovn*.yaml
+
+# Temporary documentation files
+KUBERNETES_IMPLEMENTATION.md
+
 # Keep these files
 !config/carta_*.pem
 !config/*.json
 !config/*.stub
 !config/*.txt
 !config/*.schema.json
-!carta_backend

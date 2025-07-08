@@ -650,6 +650,109 @@
             "description": "Path to the built frontend folder. If no path is provided, the packaged version will be used",
             "type": "string"
         },
+        "backendMode": {
+            "description": "Backend deployment mode: 'process' for local processes, 'pod' for Kubernetes pods",
+            "type": "string",
+            "enum": ["process", "pod"],
+            "default": "process"
+        },
+        "kubernetes": {
+            "description": "Kubernetes-specific configuration (only used when backendMode is 'pod')",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "namespace": {
+                    "description": "Namespace for user pods",
+                    "type": "string",
+                    "default": "carta"
+                },
+                "backendImage": {
+                    "description": "Backend container image",
+                    "type": "string",
+                    "default": "localhost:32000/carta-backend:latest"
+                },
+                "dataPvc": {
+                    "description": "Persistent volume claim for user data",
+                    "type": "string",
+                    "default": "carta-data-pvc"
+                },
+                "resources": {
+                    "description": "Resource limits for user pods",
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "requests": {
+                            "description": "Resource requests",
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "memory": {
+                                    "description": "Memory request",
+                                    "type": "string",
+                                    "default": "256Mi"
+                                },
+                                "cpu": {
+                                    "description": "CPU request",
+                                    "type": "string",
+                                    "default": "250m"
+                                }
+                            }
+                        },
+                        "limits": {
+                            "description": "Resource limits",
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "memory": {
+                                    "description": "Memory limit",
+                                    "type": "string",
+                                    "default": "1Gi"
+                                },
+                                "cpu": {
+                                    "description": "CPU limit",
+                                    "type": "string",
+                                    "default": "1000m"
+                                }
+                            }
+                        }
+                    }
+                },
+                "serviceAccount": {
+                    "description": "Service account for user pods",
+                    "type": "string"
+                },
+                "nodeSelector": {
+                    "description": "Node selector for user pods",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "tolerations": {
+                    "description": "Tolerations for user pods",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                            "key": {
+                                "type": "string"
+                            },
+                            "operator": {
+                                "type": "string"
+                            },
+                            "value": {
+                                "type": "string"
+                            },
+                            "effect": {
+                                "type": "string"
+                            }
+                        },
+                        "required": ["key", "operator"]
+                    }
+                }
+            }
+        },
         "backendPorts": {
             "description": "Port range to use for the CARTA backend process",
             "type": "object",

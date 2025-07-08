@@ -10,12 +10,34 @@ import * as fs from "fs";
 import * as path from "path";
 import compression from "compression";
 import chalk from "chalk";
-import {createScriptingProxyHandler, createUpgradeHandler, serverRouter} from "./serverHandlers";
 import {authGuard, authRouter} from "./auth";
 import {databaseRouter, initDB} from "./database";
 import {RuntimeConfig, ServerConfig, testUser} from "./config";
 import {runTests} from "./controllerTests";
 import * as logSymbols from "log-symbols";
+
+// Dynamic handler selection based on backend mode
+let createScriptingProxyHandler: any;
+let createUpgradeHandler: any;
+let serverRouter: any;
+
+// Determine backend mode and import appropriate handlers
+const backendMode = ServerConfig.backendMode || 'process';
+console.log(chalk.blue.bold(`Using ${backendMode}-based backend deployment`));
+
+if (backendMode === 'pod') {
+    // Import Kubernetes pod handlers
+    const podHandlers = require("./podHandlers");
+    createScriptingProxyHandler = podHandlers.createScriptingProxyHandler;
+    createUpgradeHandler = podHandlers.createUpgradeHandler;
+    serverRouter = podHandlers.serverRouter;
+} else {
+    // Import process-based handlers (default)
+    const processHandlers = require("./serverHandlers");
+    createScriptingProxyHandler = processHandlers.createScriptingProxyHandler;
+    createUpgradeHandler = processHandlers.createUpgradeHandler;
+    serverRouter = processHandlers.serverRouter;
+}
 
 if (testUser) {
     runTests(testUser).then(

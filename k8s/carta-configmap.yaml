@@ -41,7 +41,7 @@ data:
       "serverInterface": "0.0.0.0",
       "serverAddress": "http://carta.local:30004",
       "apiAddress": "/api",
-      "processCommand": "/usr/bin/carta_backend",
+      "processCommand": "/usr/local/bin/carta_backend",
       "killCommand": "/usr/bin/kill_carta_backend",
       "rootFolderTemplate": "/home/carta/carta-controller-new/data/shared_test_files",
       "baseFolderTemplate": "/home/carta/carta-controller-new/data/shared_test_files",

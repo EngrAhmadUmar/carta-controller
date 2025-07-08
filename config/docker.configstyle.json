@@ -16,6 +16,7 @@
     },
     "serverPort": 3003,
     "serverInterface": "0.0.0.0",
+    "backendMode": "process",
     "processCommand": "/home/carta/CARTA/carta-backend/build/carta_backend",
     "killCommand": "/home/carta/carta-controller-new/scripts/carta_kill_script.sh",
     "rootFolderTemplate": "/home/carta/carta-controller-new/data/{username}",

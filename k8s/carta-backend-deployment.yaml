@@ -1,0 +1,108 @@
+# CARTA Backend Image for User Pods
+# This file contains the deployment configuration for the CARTA backend image
+# that will be used by user pods spawned by the controller.
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: carta-backend-config
+  namespace: carta
+data:
+  # Configuration for the CARTA backend running in user pods
+  carta_backend_config.json: |
+    {
+      "port": 3002,
+      "no_frontend": true,
+      "no_database": true,
+      "controller_deployment": true,
+      "top_level_folder": "/data"
+    }
+---
+# Example user pod template (for reference)
+# This shows what a user pod would look like when created by the controller
+apiVersion: v1
+kind: Pod
+metadata:
+  name: carta-backend-example-user
+  namespace: carta
+  labels:
+    app: carta-backend
+    user: example-user
+    component: user-backend
+spec:
+  restartPolicy: Never
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    supplementalGroups: [1000]
+    fsGroup: 1000
+  containers:
+  - name: carta-backend
+    image: localhost:32000/carta-backend:latest
+    imagePullPolicy: Always
+    ports:
+    - containerPort: 3002
+      name: backend
+    command: ["python3", "/usr/local/bin/carta_backend"]
+    args:
+    - --no_frontend
+    - --no_database
+    - --port
+    - "3002"
+    - --top_level_folder
+    - /data
+    - --controller_deployment
+    - /data
+    env:
+    - name: CARTA_AUTH_TOKEN
+      value: "example-auth-token"
+    - name: USER
+      value: "example-user"
+    volumeMounts:
+    - name: data-volume
+      mountPath: /data
+    - name: logs-volume
+      mountPath: /home/carta/.carta/log
+    - name: config-volume
+      mountPath: /etc/carta
+      readOnly: true
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "250m"
+      limits:
+        memory: "1Gi"
+        cpu: "1000m"
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: false
+      runAsNonRoot: true
+  volumes:
+  - name: data-volume
+    persistentVolumeClaim:
+      claimName: carta-data-pvc
+  - name: logs-volume
+    persistentVolumeClaim:
+      claimName: carta-logs-pvc
+  - name: config-volume
+    configMap:
+      name: carta-backend-config
+---
+# Example service for user pod (for reference)
+apiVersion: v1
+kind: Service
+metadata:
+  name: carta-backend-example-user-svc
+  namespace: carta
+  labels:
+    app: carta-backend
+    user: example-user
+spec:
+  selector:
+    app: carta-backend
+    user: example-user
+  ports:
+  - port: 3002
+    targetPort: 3002
+    protocol: TCP
+  type: ClusterIP 
